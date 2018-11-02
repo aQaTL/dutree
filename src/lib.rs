@@ -56,6 +56,8 @@ use std::fs;
 use std::os::linux::fs::MetadataExt;
 #[cfg(target_os = "macos")]
 use std::os::unix::fs::MetadataExt;
+#[cfg(target_os = "windows")]
+use std::os::windows::fs::MetadataExt;
 use std::env;
 use std::collections::HashMap;
 
@@ -234,6 +236,8 @@ fn try_bytes_from_path( path : &Path, usage_flag : bool ) -> u64 {
         Ok(metadata) => if usage_flag { metadata.st_blocks()*512 } else { metadata.st_size() },
         #[cfg(target_os = "macos")]
         Ok(metadata) => if usage_flag { metadata.blocks()*512 } else { metadata.size() },
+        #[cfg(target_os = "windows")]
+        Ok(metadata) => metadata.file_size(), //TODO Size on disk on Windows
         Err(err)     => { 
             print_io_error( path, err );
             0
@@ -490,6 +494,9 @@ fn color_from_path<'a>( path : &Path, color_dict : &'a HashMap<String, String> )
         let mode = metadata.unwrap().st_mode();
         #[cfg(target_os = "macos")]
         let mode = metadata.unwrap().mode();
+        #[cfg(target_os = "windows")]
+        let mode = 0u32; //TODO Colored file names on Windows
+
         if path.is_dir() {
             if mode & 0o002 != 0 {  // dir other writable
                 if let Some( col ) = color_dict.get( &"ow".to_string() ) {
